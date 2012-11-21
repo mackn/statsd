@@ -19,6 +19,7 @@ var debug;
 var flushInterval;
 var graphiteHost;
 var graphitePort;
+var graphiteRoot;
 
 var graphiteStats = {};
 
@@ -35,8 +36,8 @@ var post_stats = function graphite_post_stats(statString) {
       });
       graphite.on('connect', function() {
         var ts = Math.round(new Date().getTime() / 1000);
-        statString += 'stats.statsd.graphiteStats.last_exception ' + last_exception + ' ' + ts + "\n";
-        statString += 'stats.statsd.graphiteStats.last_flush ' + last_flush + ' ' + ts + "\n";
+        statString += graphiteRoot + '.statsd.graphiteStats.last_exception ' + last_exception + ' ' + ts + "\n";
+        statString += graphiteRoot + '.statsd.graphiteStats.last_flush ' + last_flush + ' ' + ts + "\n";
         this.write(statString);
         this.end();
         graphiteStats.last_flush = Math.round(new Date().getTime() / 1000);
@@ -65,8 +66,8 @@ var flush_stats = function graphite_flush(ts, metrics) {
   var statsd_metrics = metrics.statsd_metrics;
 
   for (key in counters) {
-    statString += 'stats.'        + key + ' ' + counter_rates[key] + ' ' + ts + "\n";
-    statString += 'stats_counts.' + key + ' ' + counters[key]      + ' ' + ts + "\n";
+    statString += graphiteRoot + '.'        + key + ' ' + counter_rates[key] + ' ' + ts + "\n";
+    statString += graphiteRoot + '_counts.' + key + ' ' + counters[key]      + ' ' + ts + "\n";
 
     numStats += 1;
   }
@@ -74,7 +75,7 @@ var flush_stats = function graphite_flush(ts, metrics) {
   for (key in timer_data) {
     if (Object.keys(timer_data).length > 0) {
       for (timer_data_key in timer_data[key]) {
-         statString += 'stats.timers.' + key + '.' + timer_data_key + ' ' + timer_data[key][timer_data_key] + ' ' + ts + "\n";
+         statString += graphiteRoot + '.timers.' + key + '.' + timer_data_key + ' ' + timer_data[key][timer_data_key] + ' ' + ts + "\n";
       }
 
       numStats += 1;
@@ -82,23 +83,23 @@ var flush_stats = function graphite_flush(ts, metrics) {
   }
 
   for (key in gauges) {
-    statString += 'stats.gauges.' + key + ' ' + gauges[key] + ' ' + ts + "\n";
+    statString += graphiteRoot + '.gauges.' + key + ' ' + gauges[key] + ' ' + ts + "\n";
 
     numStats += 1;
   }
 
   for (key in sets) {
-    statString += 'stats.sets.' + key + '.count ' + sets[key].values().length + ' ' + ts + "\n";
+    statString += graphiteRoot + '.sets.' + key + '.count ' + sets[key].values().length + ' ' + ts + "\n";
 
     numStats += 1;
   }
 
   for (key in statsd_metrics) {
-    statString += 'stats.statsd.' + key + ' ' + statsd_metrics[key] + ' ' + ts + "\n";
+    statString += graphiteRoot + '.statsd.' + key + ' ' + statsd_metrics[key] + ' ' + ts + "\n";
   }
 
-  statString += 'statsd.numStats ' + numStats + ' ' + ts + "\n";
-  statString += 'stats.statsd.graphiteStats.calculationtime ' + (Date.now() - starttime) + ' ' + ts + "\n";
+  statString += graphiteRoot + '.numStats ' + numStats + ' ' + ts + "\n";
+  statString += graphiteRoot + '.statsd.graphiteStats.calculationtime ' + (Date.now() - starttime) + ' ' + ts + "\n";
   post_stats(statString);
 };
 
@@ -112,6 +113,7 @@ exports.init = function graphite_init(startup_time, config, events) {
   debug = config.debug;
   graphiteHost = config.graphiteHost;
   graphitePort = config.graphitePort;
+  graphiteRoot = (config.graphiteRoot || 'stats').replace(/^\.|\.$/g, '');
 
   graphiteStats.last_flush = startup_time;
   graphiteStats.last_exception = startup_time;
